@@ -43,7 +43,6 @@ func_start()
 	aria_rport=`nvram get aria_rport`
 	aria_user=`nvram get http_username`
 	aria_pass=`nvram get http_passwd`
-	lan_ipaddr=`nvram get lan_ipaddr_t`
 
 	[ -z "$aria_rport" ] && aria_rport="6800"
 	[ -z "$aria_pport" ] && aria_pport="16888"
@@ -110,19 +109,19 @@ EOF
 	# aria2 needed home dir
 	export HOME="$DIR_CFG"
 
+	if [ "`nvram get http_proto`" != "0" ]; then
+		SVC_ROOT=1
+		SSL_OPT="--rpc-secure=true --rpc-certificate=/etc/storage/https/server.crt --rpc-private-key=/etc/storage/https/server.key"
+	else
+		SSL_OPT=
+	fi
+
 	svc_user=""
 
 	if [ $SVC_ROOT -eq 0 ] ; then
 		chmod 777 "${DIR_LINK}"
 		chown -R nobody "$DIR_CFG"
 		svc_user=" -c nobody"
-	fi
-
-	if [ "`nvram get http_proto`" != "0" ]; then
-		chmod 644 /etc/storage/https/server.crt /etc/storage/https/server.key
-		SSL_OPT="--rpc-secure=true --rpc-certificate=/etc/storage/https/server.crt --rpc-private-key=/etc/storage/https/server.key"
-	else
-		SSL_OPT=
 	fi
 
 	start-stop-daemon -S -N $SVC_PRIORITY$svc_user -x $SVC_PATH -- \

@@ -95,7 +95,12 @@ nvram_commit_safe(void)
 void
 sys_reboot(void)
 {
+#ifdef MTD_FLASH_32M_REBOOT_BUG
+	doSystem("/sbin/mtd_storage.sh %s", "save");
+	system("/bin/mtd_write -r unlock mtd1");
+#else
 	kill(1, SIGTERM);
+#endif
 }
 
 char *
@@ -658,7 +663,7 @@ dump_file(webs_t wp, char *filename)
 	}
 
 	extensions = strrchr(filename, '.');
-	if (extensions && strcmp(extensions, ".key") == 0) {
+	if (!get_login_safe() && extensions && strcmp(extensions, ".key") == 0) {
 		return websWrite(wp, "%s", "# !!!This is hidden write-only secret key file!!!\n");
 	}
 
@@ -4073,7 +4078,9 @@ struct ej_handler ej_handlers[] =
 	{ "get_flash_time", ej_get_flash_time},
 	{ "get_static_client", ej_get_static_client},
 	{ "get_static_ccount", ej_get_static_ccount},
+#ifndef WEBUI_HIDE_VPN
 	{ "get_vpns_client", ej_get_vpns_client},
+#endif
 	{ "wl_auth_list", ej_wl_auth_list},
 #if BOARD_HAS_5G_RADIO
 	{ "wl_scan_5g", ej_wl_scan_5g},

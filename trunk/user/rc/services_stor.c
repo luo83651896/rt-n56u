@@ -270,7 +270,8 @@ write_smb_conf(void)
 	fprintf(fp, "dos filetimes = yes\n");
 	fprintf(fp, "dos filetime resolution = yes\n");
 	fprintf(fp, "access based share enum = yes\n");
-	fprintf(fp, "veto files = /Thumbs.db/.DS_Store/._.DS_Store/.apdisk/.TemporaryItems/");
+	fprintf(fp, "veto files = /Thumbs.db/.DS_Store/._*/.apdisk/.TemporaryItems/");
+	fprintf(fp, "delete veto files = yes\n");
 	fprintf(fp, "\n");
 
 	disks_info = read_disk_data();
@@ -601,6 +602,10 @@ write_nfsd_exports(void)
 	const char *exports_file = "/etc/exports";
 	const char *exports_rule = "async,insecure,no_root_squash,no_subtree_check";
 	char *nfsmm, *acl_addr, *acl_mask;
+#if defined (USE_IPV6)
+	int ipv6_type;
+	char *acl_addr6, *acl_len6;
+#endif
 
 	unlink(exports_file);
 
@@ -622,6 +627,14 @@ write_nfsd_exports(void)
 
 	acl_lan[0] = 0;
 	ip2class(acl_addr, acl_mask, acl_lan, sizeof(acl_lan));
+
+#if defined (USE_IPV6)
+	ipv6_type = get_ipv6_type();
+	if (ipv6_type != IPV6_DISABLED) {
+		acl_addr6 = nvram_safe_get("ip6_lan_addr");
+		acl_len6 = nvram_safe_get("ip6_lan_size");
+	}
+#endif
 
 	acl_vpn[0] = 0;
 	if (!get_ap_mode() && nvram_get_int("vpns_enable") && nvram_get_int("vpns_vuse")) {
@@ -658,6 +671,11 @@ write_nfsd_exports(void)
 				nfsmm = (strcmp(fsmode, "ro") == 0) ? "ro" : "rw";
 				fprintf(fp, "%s\t", mpname);
 				fprintf(fp, " %s(%s,%s)", acl_lan, nfsmm, exports_rule);
+#if defined (USE_IPV6)
+				if ((ipv6_type != IPV6_DISABLED) && (*acl_addr6) && (*acl_len6)) {
+					fprintf(fp, " %s/%s(%s,%s)", acl_addr6, acl_len6, nfsmm, exports_rule);
+				}
+#endif
 				if (acl_vpn[0])
 					fprintf(fp, " %s(%s,%s)", acl_vpn, nfsmm, exports_rule);
 				fprintf(fp, "\n");
